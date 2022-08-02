@@ -26,7 +26,6 @@ private Connection conn = null;
 		try {
 			
 			sql = "select nvl(max(Num),0) from product";
-			
 			pstmt = conn.prepareStatement(sql);
 			rs = pstmt.executeQuery();
 			
@@ -68,7 +67,8 @@ private Connection conn = null;
 		}
 	}
 	//이미지 리스트 가져오기
-	public List<ProductDTO> getLists(int start, int end) {
+	public List<ProductDTO> getLists(int start, int end,
+			String searchKey,String searchValue) {
 		
 		List<ProductDTO> lists = new ArrayList<ProductDTO>();
 		
@@ -77,16 +77,19 @@ private Connection conn = null;
 		String sql;
 		
 		try {
+			searchValue = "%" + searchValue + "%";
+			
 			sql = "select * from (";
 			sql+= "select rownum rnum,data.* from (";
 			sql+= "select productNum,productName,img,category,";
 			sql+= "price,content,stock ";
-			sql+= "from product order by productNum desc) data ) ";
+			sql+= "from product where " + searchKey + " like ? order by productNum desc) data) "; 
 			sql+= "where rnum>=? and rnum<=?";
 			
 			pstmt = conn.prepareStatement(sql);
-			pstmt.setInt(1, start);
-			pstmt.setInt(2, end);
+			pstmt.setString(1, searchValue);
+			pstmt.setInt(2, start);
+			pstmt.setInt(3, end);
 			rs = pstmt.executeQuery();
 			
 			while(rs.next()) {
@@ -110,7 +113,7 @@ private Connection conn = null;
 		return lists;
 	}
 	//전체데이터의 개수
-	public int getDataCount() {
+	public int getDataCount(String searchKey,String searchValue) {
 		
 		int dataCount = 0;
 		
@@ -119,10 +122,13 @@ private Connection conn = null;
 		String sql;
 		
 		try {
-			
-			sql = "select nvl(count(*),0) from product";
+			searchValue = "%" + searchValue + "%";
+
+			sql = "select nvl(count(*),0) from product ";
+			sql+= "where " + searchKey + " like ?";
 			pstmt = conn.prepareStatement(sql);
-						
+			pstmt.setString(1, searchValue);
+			
 			rs = pstmt.executeQuery();
 			
 			if(rs.next()) {

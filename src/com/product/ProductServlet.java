@@ -3,6 +3,8 @@ package com.product;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.sql.Connection;
 import java.util.List;
 
@@ -14,6 +16,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.product.ProductDAO;
 import com.product.ProductDTO;
+import com.board.BoardDTO;
 import com.oreilly.servlet.MultipartRequest;
 import com.oreilly.servlet.multipart.DefaultFileRenamePolicy;
 import com.util.DBConn;
@@ -93,9 +96,22 @@ public class ProductServlet extends HttpServlet{
 				currentPage = Integer.parseInt(pageNum);
 			}
 			
-			int dataCount = dao.getDataCount();
+			String searchKey = req.getParameter("searchKey");
+			String searchValue = req.getParameter("searchValue");
+			
+			if(searchValue==null) {
+				searchKey = "productName";
+				searchValue = "";
+			}else {
+				if(req.getMethod().equalsIgnoreCase("GET")) {
+					searchValue = URLDecoder.decode(searchValue, "UTF-8");
+				}
+			}
+			
+			int dataCount = dao.getDataCount(searchKey, searchValue);
 			int numPerPage = 6;
 			int totalPage = myPage.getPageCount(numPerPage, dataCount);
+		
 			
 			if(currentPage>totalPage) {
 				currentPage = totalPage;
@@ -105,15 +121,31 @@ public class ProductServlet extends HttpServlet{
 			int end = currentPage*numPerPage;
 			
 			
-			List<ProductDTO> lists = dao.getLists(start, end);
+			List<ProductDTO> lists = dao.getLists(start, end, searchKey, searchValue);
 			
-			String downloadPath = cp + "/image/download.do";
-			String deletePath = cp + "/image/deleted.do";
+			String param = "";
+			if(searchValue!=null&&!searchValue.equals("")) {
+				param = "searchKey=" + searchKey;
+				param+= "&searchValue=" + URLEncoder.encode(searchValue, "UTF-8");
+			}
+			String listUrl = cp + "/product/list.do";
+
+			if(!param.equals("")) {
+				listUrl += "?" + param;
+			}
+			
+			String downloadPath = cp + "/product/download.do";
+			String deletePath = cp + "/product/deleted.do";
 			
 			String imagePath = cp + "/pds/productImage";
 			
-			String listUrl = cp + "/image/list.do";
+			String articleUrl = cp + "/product/article.do?pageNum=" + currentPage;
 
+			
+			if(!param.equals("")) {
+				articleUrl += "&" + param;
+			}
+			
 			String pageIndexList = 
 					myPage.pageIndexList(currentPage, totalPage, listUrl);
 			
@@ -125,8 +157,47 @@ public class ProductServlet extends HttpServlet{
 			req.setAttribute("dataCount", dataCount);
 			req.setAttribute("totalPage", totalPage);
 			req.setAttribute("currentPage", currentPage);
+			req.setAttribute("articleUrl", articleUrl);
+
 			
 			url = "/product/list.jsp";
+			forward(req, resp, url);
+			
+		}else if(uri.indexOf("article.do")!=-1) {
+			
+			int num = Integer.parseInt(req.getParameter("productNum"));
+			String pageNum = req.getParameter("pageNum");
+			
+			String searchKey = req.getParameter("searchKey");
+			String searchValue = req.getParameter("searchValue");
+			
+			if(searchValue!=null&&!searchValue.equals("")) {
+				searchValue = URLDecoder.decode(searchValue, "UTF-8");
+			}
+			
+			
+			ProductDTO dto = dao.getReadData(num);
+			
+			if(dto==null) {
+				url = cp + "/product/list.do";
+				resp.sendRedirect(url);
+			}
+			
+			
+			dto.setContent(dto.getContent().replace("\r", "<br/>"));
+			
+			String param = "pageNum=" + pageNum;
+			
+			if(searchValue!=null&&!searchValue.equals("")) {
+				param += "&searchKey=" + searchKey;
+				param += "&searchValue=" +URLEncoder.encode(searchValue, "UTF-8");
+			}
+			
+			req.setAttribute("dto", dto);
+			req.setAttribute("params", param);
+			req.setAttribute("pageNum", pageNum);
+			
+			url = "/boardTest/article.jsp";
 			forward(req, resp, url);
 			
 		}else if(uri.indexOf("download.do")!=-1) {
