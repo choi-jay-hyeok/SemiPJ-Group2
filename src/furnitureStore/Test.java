@@ -4,7 +4,7 @@ public class Test {
 
 	public static void main(String[] args) {
 
-		System.out.println("Test for GitHub2 ");
+		System.out.println("Test for GitHub22 ");
 		
 	}
 
